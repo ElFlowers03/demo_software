@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: portafolio-servicios
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn run:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: RENDER
+        value: true
