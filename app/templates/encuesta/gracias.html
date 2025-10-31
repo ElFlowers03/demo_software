@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Gracias - Encuesta de Satisfacción{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="survey-container text-center">
+        <!-- Icono de éxito -->
+        <div class="mb-4">
+            <i class="fas fa-check-circle fa-5x text-success"></i>
+        </div>
+
+        <!-- Mensaje principal -->
+        <h1 class="fw-bold text-primary-custom mb-3">¡Gracias por tu Respuesta!</h1>
+        <p class="lead text-muted mb-4">
+            Tu opinión ha sido registrada exitosamente y es muy valiosa para nosotros.
+        </p>
+
+        <!-- Información adicional -->
+        <div class="bg-primary-custom-light p-4 rounded mb-4">
+            <h5 class="text-primary-custom mb-3">
+                <i class="fas fa-heart me-2"></i>Tu feedback nos ayuda a mejorar
+            </h5>
+            <p class="text-muted mb-0">
+                Nos comprometemos a analizar cada respuesta para ofrecerte 
+                servicios cada vez mejores y más personalizados.
+            </p>
+        </div>
+
+        <!-- Acciones -->
+        <div class="d-grid gap-3 col-md-6 mx-auto">
+            <a href="{{ url_for('home.index') }}" class="btn btn-primary-custom btn-lg">
+                <i class="fas fa-home me-2"></i>Volver al Inicio
+            </a>
+            <a href="{{ url_for('encuesta.index') }}" class="btn btn-outline-primary-custom">
+                <i class="fas fa-redo me-2"></i>Enviar Otra Encuesta
+            </a>
+        </div>
+
+        <!-- Redes sociales -->
+        <div class="mt-5 pt-4 border-top">
+            <p class="text-muted mb-3">¿Quieres saber más sobre nosotros?</p>
+            <div>
+                <a href="#" class="btn btn-outline-secondary btn-sm me-2">
+                    <i class="fab fa-facebook me-1"></i>Facebook
+                </a>
+                <a href="#" class="btn btn-outline-secondary btn-sm me-2">
+                    <i class="fab fa-twitter me-1"></i>Twitter
+                </a>
+                <a href="#" class="btn btn-outline-secondary btn-sm">
+                    <i class="fab fa-linkedin me-1"></i>LinkedIn
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

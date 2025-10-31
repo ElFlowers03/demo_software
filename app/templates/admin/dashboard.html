@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Panel Administrativo{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="fw-bold text-primary-custom">
+                        <i class="fas fa-chart-line me-2"></i>Panel Administrativo
+                    </h1>
+                    <p class="text-muted">Bienvenido, {{ session.nombre or session.usuario }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.logout') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Estadísticas -->
+    <div class="row g-4 mb-4">
+        <!-- Total Ventas -->
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card">
+                <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                <h3>{{ ventas_recientes|length if ventas_recientes else 0 }}</h3>
+                <p>Ventas Registradas</p>
+            </div>
+        </div>
+
+        <!-- Ingresos -->
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #5FA582, #4A8A6B);">
+                <i class="fas fa-dollar-sign fa-2x mb-3"></i>
+                <h3>
+                    {% if estadisticas_ventas %}
+                        ${{ "%.2f"|format(estadisticas_ventas[0].ingresos_totales or 0) }}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </h3>
+                <p>Ingresos Totales</p>
+            </div>
+        </div>
+
+        <!-- Encuestas -->
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #6BA3C9, #5689AA);">
+                <i class="fas fa-clipboard-check fa-2x mb-3"></i>
+                <h3>{{ encuestas_recientes|length if encuestas_recientes else 0 }}</h3>
+                <p>Encuestas Recibidas</p>
+            </div>
+        </div>
+
+        <!-- Calificación Promedio -->
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #E0A85F, #C89450);">
+                <i class="fas fa-star fa-2x mb-3"></i>
+                <h3>
+                    {% if estadisticas_encuestas %}
+                        {{ "%.1f"|format(estadisticas_encuestas[0].promedio_calificacion or 0) }}
+                    {% else %}
+                        0.0
+                    {% endif %}
+                </h3>
+                <p>Calificación Promedio</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Gráfico de Ventas -->
+        <div class="col-lg-8">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-bar me-2 text-primary-custom"></i>
+                    Historial de Ventas
+                </h4>
+                <canvas id="ventasChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico de Encuestas -->
+        <div class="col-lg-4">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-pie me-2 text-primary-custom"></i>
+                    Distribución de Calificaciones
+                </h4>
+                <canvas id="encuestasChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ventas Recientes -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="admin-card">
+                <h4 class="mb-3">
+                    <i class="fas fa-history me-2 text-primary-custom"></i>
+                    Últimas Ventas
+                </h4>
+                {% if ventas_recientes %}
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Total</th>
+                                <th>Método</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta in ventas_recientes %}
+                            <tr>
+                                <td><strong>#{{ venta.id }}</strong></td>
+                                <td>{{ venta.fecha.strftime('%d/%m/%Y %H:%M') if venta.fecha else 'N/A' }}</td>
+                                <td class="fw-bold text-success">${{ "%.2f"|format(venta.total) }}</td>
+                                <td>
+                                    <span class="badge badge-primary-custom">{{ venta.metodo_pago }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('admin.ventas') }}" class="btn btn-outline-primary-custom">
+                        Ver Todas las Ventas
+                    </a>
+                </div>
+                {% else %}
+                <p class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                    No hay ventas registradas
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Encuestas Recientes -->
+        <div class="col-lg-6">
+            <div class="admin-card">
+                <h4 class="mb-3">
+                    <i class="fas fa-comments me-2 text-primary-custom"></i>
+                    Últimas Encuestas
+                </h4>
+                {% if encuestas_recientes %}
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Calificación</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for encuesta in encuestas_recientes %}
+                            <tr>
+                                <td>{{ encuesta.servicio_evaluado }}</td>
+                                <td>
+                                    <span class="badge {% if encuesta.calificacion >= 8 %}bg-success{% elif encuesta.calificacion >= 5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ encuesta.calificacion }}/10
+                                    </span>
+                                </td>
+                                <td class="small">{{ encuesta.fecha.strftime('%d/%m/%Y') if encuesta.fecha else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('admin.encuestas') }}" class="btn btn-outline-primary-custom">
+                        Ver Todas las Encuestas
+                    </a>
+                </div>
+                {% else %}
+                <p class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                    No hay encuestas registradas
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Configuración de colores
+const primaryColor = '#5D7D98';
+const successColor = '#5FA582';
+const warningColor = '#E0A85F';
+const dangerColor = '#D87D7D';
+
+// Gráfico de Ventas
+const ventasCtx = document.getElementById('ventasChart');
+if (ventasCtx) {
+    const ventasData = {{ estadisticas_ventas|tojson if estadisticas_ventas else '[]'|safe }};
+    
+    new Chart(ventasCtx, {
+        type: 'line',
+        data: {
+            labels: ventasData.map(v => v.fecha).reverse(),
+            datasets: [{
+                label: 'Ingresos Diarios',
+                data: ventasData.map(v => v.ingresos_totales).reverse(),
+                borderColor: primaryColor,
+                backgroundColor: primaryColor + '33',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Gráfico de Encuestas (Doughnut)
+const encuestasCtx = document.getElementById('encuestasChart');
+if (encuestasCtx) {
+    const encuestasData = {{ estadisticas_encuestas|tojson if estadisticas_encuestas else '[]'|safe }};
+    
+    new Chart(encuestasCtx, {
+        type: 'doughnut',
+        data: {
+            labels: encuestasData.map(e => e.servicio_evaluado),
+            datasets: [{
+                label: 'Encuestas por Servicio',
+                data: encuestasData.map(e => e.cantidad),
+                backgroundColor: [
+                    primaryColor,
+                    successColor,
+                    warningColor,
+                    dangerColor,
+                    '#6BA3C9',
+                    '#95A5A6'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - Portafolio de Servicios{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <h1 class="fade-in-up">Servicios de Desarrollo y Soluciones Web Personalizadas</h1>
+        <p class="fade-in-up">Transformamos tus ideas en soluciones digitales profesionales y escalables</p>
+        <div class="mt-4">
+            <a href="#servicios" class="btn btn-primary-custom btn-lg me-3">
+                <i class="fas fa-rocket me-2"></i>Ver Demos
+            </a>
+            <a href="#contacto" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-envelope me-2"></i>Contactar
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Sección de Servicios -->
+<section id="servicios" class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary-custom">Nuestros Servicios</h2>
+            <p class="text-muted">Soluciones completas de desarrollo de software a tu medida</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for servicio in servicios %}
+            <div class="col-md-6 col-lg-3">
+                <div class="service-card">
+                    <div class="service-icon">
+                        {% if servicio.icono == 'shopping-cart' %}
+                            <i class="fas fa-shopping-cart"></i>
+                        {% elif servicio.icono == 'clipboard-check' %}
+                            <i class="fas fa-clipboard-check"></i>
+                        {% elif servicio.icono == 'chart-bar' %}
+                            <i class="fas fa-chart-bar"></i>
+                        {% else %}
+                            <i class="fas fa-browser"></i>
+                        {% endif %}
+                    </div>
+                    <h3>{{ servicio.titulo }}</h3>
+                    <p>{{ servicio.descripcion }}</p>
+                    {% if servicio.demo %}
+                    <a href="{{ servicio.url }}" class="btn btn-primary-custom w-100">
+                        <i class="fas fa-eye me-2"></i>Ver Demo
+                    </a>
+                    {% else %}
+                    <a href="https://oktravelviajes.com/" class="btn btn-outline-primary-custom w-100">
+                        <i class="fas fa-info-circle me-2"></i>Más Información
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Sección de Características -->
+<section class="py-5 bg-primary-custom-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary-custom">¿Por Qué Elegirnos?</h2>
+            <p class="text-muted">Calidad, experiencia y compromiso en cada proyecto</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div class="service-icon mx-auto mb-3">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h4>Código Limpio</h4>
+                    <p class="text-muted">Desarrollamos con las mejores prácticas y estándares de la industria</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div class="service-icon mx-auto mb-3">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4>Equipo Experto</h4>
+                    <p class="text-muted">Profesionales con años de experiencia en desarrollo web y software</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <div class="service-icon mx-auto mb-3">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h4>Soporte 24/7</h4>
+                    <p class="text-muted">Acompañamiento continuo durante y después del desarrollo</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sección de Tecnologías -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary-custom">Tecnologías que Dominamos</h2>
+            <p class="text-muted">Stack completo de desarrollo moderno</p>
+        </div>
+        
+        <div class="row text-center">
+            <div class="col-6 col-md-3 mb-4">
+                <div class="p-3">
+                    <i class="fab fa-python fa-4x text-primary-custom mb-3"></i>
+                    <h5>Python/Flask</h5>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-4">
+                <div class="p-3">
+                    <i class="fab fa-js fa-4x text-primary-custom mb-3"></i>
+                    <h5>JavaScript</h5>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-4">
+                <div class="p-3">
+                    <i class="fas fa-database fa-4x text-primary-custom mb-3"></i>
+                    <h5>MySQL</h5>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-4">
+                <div class="p-3">
+                    <i class="fab fa-react fa-4x text-primary-custom mb-3"></i>
+                    <h5>React</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sección de Contacto -->
+<section id="contacto" class="py-5 bg-primary-custom-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <h2 class="fw-bold text-primary-custom mb-4">¿Listo para Empezar tu Proyecto?</h2>
+                <p class="lead text-muted mb-4">Contáctanos y convierte tu idea en realidad. Ofrecemos consultoría gratuita para evaluar tus necesidades.</p>
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <strong>Consultoría inicial sin costo</strong>
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <strong>Propuestas personalizadas</strong>
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <strong>Garantía de satisfacción</strong>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <div class="bg-white p-4 rounded shadow">
+                    <h4 class="mb-4">Envíanos un Mensaje</h4>
+                    <form>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" placeholder="Correo electrónico" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="tel" class="form-control" placeholder="Teléfono">
+                        </div>
+                        <div class="mb-3">
+                            <textarea class="form-control" rows="4" placeholder="Cuéntanos sobre tu proyecto" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary-custom w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Mensaje
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

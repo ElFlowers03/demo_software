@@ -1,0 +1,553 @@
+{% extends "base.html" %}
+
+{% block title %}Encuestas - Panel Administrativo{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="fw-bold text-primary-custom">
+                        <i class="fas fa-clipboard-check me-2"></i>Reporte de Encuestas
+                    </h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Encuestas</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
+                    </a>
+                    <button class="btn btn-primary-custom" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Resumidas -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-clipboard-list fa-2x mb-3"></i>
+                <h3>{{ encuestas|length }}</h3>
+                <p>Total de Encuestas</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #5FA582, #4A8A6B);">
+                <i class="fas fa-star fa-2x mb-3"></i>
+                <h3>
+                    {% if encuestas|length > 0 %}
+                        {% set promedio = encuestas|sum(attribute='calificacion') / encuestas|length %}
+                        {{ "%.1f"|format(promedio) }}
+                    {% else %}
+                        0.0
+                    {% endif %}
+                </h3>
+                <p>Calificación Promedio</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #6BA3C9, #5689AA);">
+                <i class="fas fa-smile fa-2x mb-3"></i>
+                <h3>
+                    {% if encuestas|length > 0 %}
+                        {% set satisfechos = encuestas|selectattr('calificacion', '>=', 8)|list|length %}
+                        {{ "%.0f"|format((satisfechos / encuestas|length) * 100) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h3>
+                <p>Clientes Satisfechos</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #E0A85F, #C89450);">
+                <i class="fas fa-trophy fa-2x mb-3"></i>
+                <h3>
+                    {% if encuestas|length > 0 %}
+                        {% set nps = encuestas|selectattr('calificacion', '>=', 9)|list|length %}
+                        {{ nps }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </h3>
+                <p>Promotores (9-10)</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Gráfico de Distribución de Calificaciones -->
+        <div class="col-lg-6">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-bar me-2 text-primary-custom"></i>
+                    Distribución de Calificaciones
+                </h4>
+                <canvas id="calificacionesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico por Servicio -->
+        <div class="col-lg-6">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-pie me-2 text-primary-custom"></i>
+                    Encuestas por Servicio
+                </h4>
+                <canvas id="serviciosChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Tendencia -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-line me-2 text-primary-custom"></i>
+                    Tendencia de Satisfacción
+                </h4>
+                <canvas id="tendenciaChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Tabla de Encuestas -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="admin-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-table me-2 text-primary-custom"></i>
+                        Detalle de Encuestas
+                    </h4>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="filterServicio" style="max-width: 200px;">
+                            <option value="">Todos los servicios</option>
+                            {% set servicios_unicos = encuestas|map(attribute='servicio_evaluado')|unique|list %}
+                            {% for servicio in servicios_unicos %}
+                            <option value="{{ servicio }}">{{ servicio }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select" id="filterCalificacion" style="max-width: 200px;">
+                            <option value="">Todas las calificaciones</option>
+                            <option value="promotor">Promotores (9-10)</option>
+                            <option value="pasivo">Pasivos (7-8)</option>
+                            <option value="detractor">Detractores (1-6)</option>
+                        </select>
+                        <div class="input-group" style="max-width: 250px;">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchEncuestas" 
+                                   placeholder="Buscar...">
+                        </div>
+                    </div>
+                </div>
+
+                {% if encuestas %}
+                <div class="table-responsive">
+                    <table class="table table-custom" id="encuestasTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Servicio Evaluado</th>
+                                <th>Calificación</th>
+                                <th>Tipo</th>
+                                <th>Comentario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for encuesta in encuestas %}
+                            <tr data-servicio="{{ encuesta.servicio_evaluado }}" 
+                                data-calificacion="{{ encuesta.calificacion }}">
+                                <td>
+                                    <strong class="text-primary-custom">#{{ encuesta.id }}</strong>
+                                </td>
+                                <td>
+                                    <i class="fas fa-calendar-alt me-1 text-muted"></i>
+                                    {{ encuesta.fecha.strftime('%d/%m/%Y') if encuesta.fecha else 'N/A' }}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ encuesta.fecha.strftime('%H:%M') if encuesta.fecha else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-primary-custom">
+                                        {{ encuesta.servicio_evaluado }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if encuesta.calificacion >= 9 %}
+                                            <span class="badge bg-success fs-6 me-2">
+                                                {{ encuesta.calificacion }}/10
+                                            </span>
+                                            {% for i in range(encuesta.calificacion) %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% endfor %}
+                                        {% elif encuesta.calificacion >= 7 %}
+                                            <span class="badge bg-warning fs-6 me-2">
+                                                {{ encuesta.calificacion }}/10
+                                            </span>
+                                            {% for i in range(encuesta.calificacion) %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="badge bg-danger fs-6 me-2">
+                                                {{ encuesta.calificacion }}/10
+                                            </span>
+                                            {% for i in range(encuesta.calificacion) %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if encuesta.calificacion >= 9 %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-thumbs-up me-1"></i>Promotor
+                                        </span>
+                                    {% elif encuesta.calificacion >= 7 %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-meh me-1"></i>Pasivo
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-thumbs-down me-1"></i>Detractor
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if encuesta.comentario %}
+                                        <button class="btn btn-sm btn-outline-primary-custom" 
+                                                onclick="verComentario('{{ encuesta.comentario|replace("'", "\\'") }}')">
+                                            <i class="fas fa-comment-dots me-1"></i>Ver
+                                        </button>
+                                    {% else %}
+                                        <span class="text-muted">Sin comentario</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación simple -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <p class="text-muted mb-0">
+                        Mostrando <span id="countVisible">{{ encuestas|length }}</span> de {{ encuestas|length }} encuestas
+                    </p>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay encuestas registradas</h5>
+                    <p class="text-muted">Las encuestas aparecerán aquí una vez que se registren</p>
+                    <a href="{{ url_for('encuesta.index') }}" class="btn btn-primary-custom mt-3">
+                        <i class="fas fa-plus me-2"></i>Ir a Encuestas
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Comentarios Destacados -->
+    {% if encuestas %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-comments me-2 text-primary-custom"></i>
+                    Comentarios Destacados
+                </h4>
+                <div class="row g-3">
+                    {% set encuestas_con_comentario = encuestas|selectattr('comentario', 'ne', None)|list %}
+                    {% for encuesta in encuestas_con_comentario[:6] %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge {% if encuesta.calificacion >= 8 %}bg-success{% elif encuesta.calificacion >= 5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ encuesta.calificacion }}/10
+                                    </span>
+                                    <small class="text-muted">
+                                        {{ encuesta.fecha.strftime('%d/%m/%Y') if encuesta.fecha else 'N/A' }}
+                                    </small>
+                                </div>
+                                <p class="small mb-2">
+                                    <strong>{{ encuesta.servicio_evaluado }}</strong>
+                                </p>
+                                <p class="text-muted small mb-0">
+                                    <i class="fas fa-quote-left me-1"></i>
+                                    {{ encuesta.comentario[:100] }}{{ '...' if encuesta.comentario|length > 100 else '' }}
+                                    <i class="fas fa-quote-right ms-1"></i>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Ver Comentario Completo -->
+<div class="modal fade" id="comentarioModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-comment me-2"></i>Comentario del Cliente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="comentarioContent" class="lead"></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Configuración de colores
+const primaryColor = '#5D7D98';
+const successColor = '#5FA582';
+const warningColor = '#E0A85F';
+const dangerColor = '#D87D7D';
+
+// Datos de encuestas desde el servidor
+const todasEncuestas = {{ encuestas|tojson if encuestas else '[]'|safe }};
+
+// Gráfico de Distribución de Calificaciones (Barras)
+const calificacionesCtx = document.getElementById('calificacionesChart');
+if (calificacionesCtx && todasEncuestas.length > 0) {
+    const distribucion = {};
+    for (let i = 1; i <= 10; i++) {
+        distribucion[i] = 0;
+    }
+    todasEncuestas.forEach(e => {
+        distribucion[e.calificacion] = (distribucion[e.calificacion] || 0) + 1;
+    });
+
+    new Chart(calificacionesCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(distribucion),
+            datasets: [{
+                label: 'Número de Encuestas',
+                data: Object.values(distribucion),
+                backgroundColor: Object.keys(distribucion).map(cal => {
+                    if (cal >= 9) return successColor;
+                    if (cal >= 7) return warningColor;
+                    return dangerColor;
+                }),
+                borderColor: Object.keys(distribucion).map(cal => {
+                    if (cal >= 9) return successColor;
+                    if (cal >= 7) return warningColor;
+                    return dangerColor;
+                }),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Cantidad de Respuestas'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Calificación'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Gráfico por Servicio
+const serviciosCtx = document.getElementById('serviciosChart');
+if (serviciosCtx && todasEncuestas.length > 0) {
+    const servicios = {};
+    todasEncuestas.forEach(e => {
+        const servicio = e.servicio_evaluado || 'No especificado';
+        servicios[servicio] = (servicios[servicio] || 0) + 1;
+    });
+
+    new Chart(serviciosCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(servicios),
+            datasets: [{
+                data: Object.values(servicios),
+                backgroundColor: [
+                    primaryColor,
+                    successColor,
+                    warningColor,
+                    dangerColor,
+                    '#6BA3C9',
+                    '#95A5A6'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Gráfico de Tendencia
+const tendenciaCtx = document.getElementById('tendenciaChart');
+if (tendenciaCtx && todasEncuestas.length > 0) {
+    // Agrupar por fecha
+    const porFecha = {};
+    todasEncuestas.forEach(e => {
+        const fecha = new Date(e.fecha).toLocaleDateString('es-MX');
+        if (!porFecha[fecha]) {
+            porFecha[fecha] = { total: 0, sum: 0 };
+        }
+        porFecha[fecha].total++;
+        porFecha[fecha].sum += e.calificacion;
+    });
+
+    const fechas = Object.keys(porFecha).sort();
+    const promedios = fechas.map(f => porFecha[f].sum / porFecha[f].total);
+
+    new Chart(tendenciaCtx, {
+        type: 'line',
+        data: {
+            labels: fechas,
+            datasets: [{
+                label: 'Calificación Promedio',
+                data: promedios,
+                borderColor: primaryColor,
+                backgroundColor: primaryColor + '33',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10,
+                    title: {
+                        display: true,
+                        text: 'Calificación Promedio'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Filtros
+const filterServicio = document.getElementById('filterServicio');
+const filterCalificacion = document.getElementById('filterCalificacion');
+const searchInput = document.getElementById('searchEncuestas');
+
+function aplicarFiltros() {
+    const servicioSeleccionado = filterServicio ? filterServicio.value.toLowerCase() : '';
+    const calificacionSeleccionada = filterCalificacion ? filterCalificacion.value : '';
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const rows = document.querySelectorAll('#encuestasTable tbody tr');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const servicio = row.getAttribute('data-servicio').toLowerCase();
+        const calificacion = parseInt(row.getAttribute('data-calificacion'));
+        const text = row.textContent.toLowerCase();
+
+        let mostrar = true;
+
+        // Filtro por servicio
+        if (servicioSeleccionado && !servicio.includes(servicioSeleccionado)) {
+            mostrar = false;
+        }
+
+        // Filtro por tipo de calificación
+        if (calificacionSeleccionada) {
+            if (calificacionSeleccionada === 'promotor' && calificacion < 9) mostrar = false;
+            if (calificacionSeleccionada === 'pasivo' && (calificacion < 7 || calificacion > 8)) mostrar = false;
+            if (calificacionSeleccionada === 'detractor' && calificacion >= 7) mostrar = false;
+        }
+
+        // Filtro por búsqueda
+        if (searchTerm && !text.includes(searchTerm)) {
+            mostrar = false;
+        }
+
+        row.style.display = mostrar ? '' : 'none';
+        if (mostrar) visibleCount++;
+    });
+
+    // Actualizar contador
+    const countElement = document.getElementById('countVisible');
+    if (countElement) {
+        countElement.textContent = visibleCount;
+    }
+}
+
+if (filterServicio) filterServicio.addEventListener('change', aplicarFiltros);
+if (filterCalificacion) filterCalificacion.addEventListener('change', aplicarFiltros);
+if (searchInput) searchInput.addEventListener('input', aplicarFiltros);
+
+// Ver comentario completo
+function verComentario(comentario) {
+    const modal = new bootstrap.Modal(document.getElementById('comentarioModal'));
+    document.getElementById('comentarioContent').textContent = comentario;
+    modal.show();
+}
+</script>
+{% endblock %}

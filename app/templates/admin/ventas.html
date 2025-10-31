@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block title %}Ventas - Panel Administrativo{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="fw-bold text-primary-custom">
+                        <i class="fas fa-chart-line me-2"></i>Reporte de Ventas
+                    </h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Ventas</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
+                    </a>
+                    <button class="btn btn-primary-custom" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Resumidas -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                <h3>{{ ventas|length }}</h3>
+                <p>Total de Ventas</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #5FA582, #4A8A6B);">
+                <i class="fas fa-dollar-sign fa-2x mb-3"></i>
+                <h3>
+                    {% set total_ingresos = ventas|sum(attribute='total') %}
+                    ${{ "%.2f"|format(total_ingresos) }}
+                </h3>
+                <p>Ingresos Totales</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #6BA3C9, #5689AA);">
+                <i class="fas fa-calculator fa-2x mb-3"></i>
+                <h3>
+                    {% if ventas|length > 0 %}
+                        ${{ "%.2f"|format(total_ingresos / ventas|length) }}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </h3>
+                <p>Ticket Promedio</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #E0A85F, #C89450);">
+                <i class="fas fa-crown fa-2x mb-3"></i>
+                <h3>
+                    {% if ventas|length > 0 %}
+                        {% if ventas|length > 0 %}
+                            ${{ "%.2f"|format(ventas|map(attribute='total')|max) }}
+                        {% else %}
+                            $0.00
+                        {% endif %}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </h3>
+                <p>Venta Máxima</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Gráfico de Ventas por Día -->
+        <div class="col-lg-8">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-chart-area me-2 text-primary-custom"></i>
+                    Evolución de Ventas
+                </h4>
+                <canvas id="ventasChartDetalle"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico de Métodos de Pago -->
+        <div class="col-lg-4">
+            <div class="admin-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-credit-card me-2 text-primary-custom"></i>
+                    Métodos de Pago
+                </h4>
+                <canvas id="metodoPagoChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Ventas Detallada -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="admin-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-table me-2 text-primary-custom"></i>
+                        Detalle de Ventas
+                    </h4>
+                    <div class="input-group" style="max-width: 300px;">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchVentas" 
+                               placeholder="Buscar venta...">
+                    </div>
+                </div>
+
+                {% if ventas %}
+                <div class="table-responsive">
+                    <table class="table table-custom" id="ventasTable">
+                        <thead>
+                            <tr>
+                                <th>ID Venta</th>
+                                <th>Fecha y Hora</th>
+                                <th>Total</th>
+                                <th>Método de Pago</th>
+                                <th>Productos Vendidos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta in ventas %}
+                            <tr>
+                                <td>
+                                    <strong class="text-primary-custom">#{{ venta.id }}</strong>
+                                </td>
+                                <td>
+                                    <i class="fas fa-calendar-alt me-1 text-muted"></i>
+                                    {{ venta.fecha.strftime('%d/%m/%Y') if venta.fecha else 'N/A' }}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ venta.fecha.strftime('%H:%M:%S') if venta.fecha else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong class="text-success fs-5">${{ "%.2f"|format(venta.total) }}</strong>
+                                </td>
+                                <td>
+                                    {% if venta.metodo_pago == 'Efectivo' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-money-bill-wave me-1"></i>{{ venta.metodo_pago }}
+                                        </span>
+                                    {% elif venta.metodo_pago == 'Tarjeta' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-credit-card me-1"></i>{{ venta.metodo_pago }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-exchange-alt me-1"></i>{{ venta.metodo_pago }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge badge-primary-custom">
+                                        {{ venta.productos_vendidos or 0 }} items
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary-custom" 
+                                            onclick="verDetalle({{ venta.id }})">
+                                        <i class="fas fa-eye me-1"></i>Ver Detalle
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación simple -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <p class="text-muted mb-0">
+                        Mostrando {{ ventas|length }} ventas
+                    </p>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay ventas registradas</h5>
+                    <p class="text-muted">Las ventas aparecerán aquí una vez que se registren</p>
+                    <a href="{{ url_for('pos.index') }}" class="btn btn-primary-custom mt-3">
+                        <i class="fas fa-plus me-2"></i>Ir al POS
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Detalle de Venta -->
+<div class="modal fade" id="detalleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary-custom text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-invoice me-2"></i>Detalle de Venta
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalleContent">
+                <div class="text-center py-4">
+                    <div class="spinner-custom"></div>
+                    <p class="text-muted mt-3">Cargando detalle...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Configuración de colores
+const primaryColor = '#5D7D98';
+const successColor = '#5FA582';
+const warningColor = '#E0A85F';
+const dangerColor = '#D87D7D';
+const infoColor = '#6BA3C9';
+
+// Datos de ventas desde el servidor
+const ventasData = {{ estadisticas|tojson if estadisticas else '[]'|safe }};
+const todasVentas = {{ ventas|tojson if ventas else '[]'|safe }};
+
+// Gráfico de Evolución de Ventas
+const ventasCtx = document.getElementById('ventasChartDetalle');
+if (ventasCtx && ventasData.length > 0) {
+    new Chart(ventasCtx, {
+        type: 'bar',
+        data: {
+            labels: ventasData.map(v => v.fecha).reverse().slice(0, 15),
+            datasets: [{
+                label: 'Ventas del Día',
+                data: ventasData.map(v => v.total_ventas).reverse().slice(0, 15),
+                backgroundColor: primaryColor + '88',
+                borderColor: primaryColor,
+                borderWidth: 2
+            }, {
+                label: 'Ingresos del Día',
+                data: ventasData.map(v => v.ingresos_totales).reverse().slice(0, 15),
+                backgroundColor: successColor + '88',
+                borderColor: successColor,
+                borderWidth: 2,
+                type: 'line',
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                if (context.dataset.label.includes('Ingresos')) {
+                                    label += '$' + context.parsed.y.toFixed(2);
+                                } else {
+                                    label += context.parsed.y;
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Número de Ventas'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Ingresos ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Gráfico de Métodos de Pago
+const metodoPagoCtx = document.getElementById('metodoPagoChart');
+if (metodoPagoCtx && todasVentas.length > 0) {
+    // Contar métodos de pago
+    const metodosPago = {};
+    todasVentas.forEach(venta => {
+        const metodo = venta.metodo_pago || 'Efectivo';
+        metodosPago[metodo] = (metodosPago[metodo] || 0) + 1;
+    });
+
+    new Chart(metodoPagoCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(metodosPago),
+            datasets: [{
+                data: Object.values(metodosPago),
+                backgroundColor: [
+                    successColor,
+                    primaryColor,
+                    infoColor,
+                    warningColor
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Búsqueda en tabla
+const searchInput = document.getElementById('searchVentas');
+if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#ventasTable tbody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+}
+
+// Ver detalle de venta
+function verDetalle(ventaId) {
+    const modal = new bootstrap.Modal(document.getElementById('detalleModal'));
+    const content = document.getElementById('detalleContent');
+    
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-custom"></div>
+            <p class="text-muted mt-3">Cargando detalle...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Simular carga de detalle (aquí podrías hacer una llamada AJAX real)
+    setTimeout(() => {
+        const venta = todasVentas.find(v => v.id === ventaId);
+        if (venta) {
+            content.innerHTML = `
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">ID de Venta</h6>
+                        <p class="fs-4 fw-bold text-primary-custom">#${venta.id}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Fecha y Hora</h6>
+                        <p class="fs-5">${new Date(venta.fecha).toLocaleString('es-MX')}</p>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Método de Pago</h6>
+                        <p class="fs-5"><span class="badge badge-primary-custom">${venta.metodo_pago}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Total</h6>
+                        <p class="fs-3 fw-bold text-success">$${venta.total.toFixed(2)}</p>
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Nota:</strong> Para ver los productos específicos de esta venta, 
+                    se requeriría consultar la tabla detalle_ventas en la base de datos.
+                </div>
+            `;
+        }
+    }, 500);
+}
+</script>
+{% endblock %}
